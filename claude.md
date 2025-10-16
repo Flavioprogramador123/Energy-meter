@@ -3,7 +3,9 @@
 Documento de referência para evolução automática. Contém visão, árvore, modelos, endpoints, conectores, regras e analytics.
 
 ## Visão e Objetivo
-- Plataforma master para coletar dados (Modbus RTU/RS485, Tuya API e outros), analisar e gerar alarmes por cliente.
+- Plataforma master para coletar dados (Modbus RTU/RS485, Modbus TCP, Tuya API e outros), analisar e gerar alarmes por cliente.
+- **APENAS DADOS REAIS**: Sistema trabalha exclusivamente com dados auditáveis de hardware físico
+- Logs de auditoria em `data/audit.log` registram todas as leituras com timestamp, device_id, driver e métricas
 - Encaminhamento opcional para plataforma slave (cliente acompanha a planta).
 - Armazenamento local (SQLite); possível expansão para Firebase/Cloud.
 
@@ -11,8 +13,9 @@ Documento de referência para evolução automática. Contém visão, árvore, m
 - API: FastAPI + Jinja2 (templates)
 - ORM/DB: SQLAlchemy + SQLite
 - Agendador: APScheduler
-- Conectores: minimalmodbus (RTU), tinytuya (Tuya Cloud)
+- Conectores: minimalmodbus (RTU), pymodbus (TCP), tinytuya (Tuya Cloud)
 - Analytics: pandas, numpy (regressão linear via polyfit)
+- Auditoria: logging em arquivo estruturado (data/audit.log)
 - Frontend: Chart.js (CDN) + CSS responsivo
 
 ## Árvore do Projeto
@@ -36,7 +39,6 @@ app/
     alarms.py
     clients.py
     dashboard.py
-    dev_demo.py
     devices.py
     ingest.py
     metrics.py

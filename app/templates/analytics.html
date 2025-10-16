@@ -7,6 +7,10 @@
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="stylesheet" href="/static/css/styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    optgroup { font-weight: bold; color: #087074; }
+    option { font-weight: normal; color: #333; }
+  </style>
 </head>
 <body>
   <header>
@@ -27,10 +31,35 @@
 
     <label>Métrica:
       <select id="metricSelect">
-        <option value="voltage">Tensão</option>
-        <option value="current">Corrente</option>
-        <option value="power" selected>Potência</option>
-        <option value="energy_wh">Energia</option>
+        <optgroup label="Monofásico (PZEM)">
+          <option value="voltage">Tensão</option>
+          <option value="current">Corrente</option>
+          <option value="power" selected>Potência</option>
+          <option value="energy_wh">Energia</option>
+        </optgroup>
+        <optgroup label="Trifásico - Tensões (SDM630)">
+          <option value="voltage_l1">Tensão L1</option>
+          <option value="voltage_l2">Tensão L2</option>
+          <option value="voltage_l3">Tensão L3</option>
+          <option value="voltage_avg">Tensão Média</option>
+        </optgroup>
+        <optgroup label="Trifásico - Correntes (SDM630)">
+          <option value="current_l1">Corrente L1</option>
+          <option value="current_l2">Corrente L2</option>
+          <option value="current_l3">Corrente L3</option>
+          <option value="current_total">Corrente Total</option>
+        </optgroup>
+        <optgroup label="Trifásico - Potências (SDM630)">
+          <option value="power_l1">Potência L1</option>
+          <option value="power_l2">Potência L2</option>
+          <option value="power_l3">Potência L3</option>
+          <option value="power_total">Potência Total</option>
+        </optgroup>
+        <optgroup label="Outros (SDM630)">
+          <option value="frequency">Frequência</option>
+          <option value="power_factor">Fator de Potência</option>
+          <option value="energy_kwh">Energia (kWh)</option>
+        </optgroup>
       </select>
     </label>
 
@@ -140,9 +169,10 @@
           el('statsBox').innerHTML = statsHTML;
         }
 
-        // Análise de demanda (apenas para potência)
-        if (metric === 'power') {
-          const demandData = await fetch(`/api/metrics/demand?device_id=${deviceId}&period=${period}`)
+        // Análise de demanda (apenas para métricas de potência)
+        const isPowerMetric = metric === 'power' || metric.startsWith('power_');
+        if (isPowerMetric) {
+          const demandData = await fetch(`/api/metrics/demand?device_id=${deviceId}&period=${period}&metric=${metric}`)
             .then(r => r.json());
 
           if (!demandData.error) {
@@ -190,7 +220,7 @@
             }
           }
         } else {
-          el('demandBox').innerHTML = '<em style="color:#888">Análise de demanda disponível apenas para Potência</em>';
+          el('demandBox').innerHTML = '<em style="color:#888">Análise de demanda disponível apenas para métricas de Potência</em>';
         }
 
         // Gráfico de energia acumulada (se for energia)

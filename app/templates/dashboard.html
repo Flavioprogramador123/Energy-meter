@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="stylesheet" href="/static/css/styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script defer src="/static/js/dashboard.js"></script>
+  <script defer src="/static/js/dashboard.js?v=3"></script>
 </head>
 <body>
   <header style="display:flex;justify-content:space-between;align-items:center">
@@ -26,7 +26,6 @@
     <span id="deviceStatus" class="status-indicator"></span>
     <button id="refreshBtn">Atualizar</button>
     <button id="configBtn" class="btn-config" title="Configurações">⚙️</button>
-    <button id="deleteBtn" class="btn-delete" title="Remover dispositivo fake">🗑️</button>
     <span style="margin-left:auto;font-size:13px;color:#666">Atualização automática a cada 30s</span>
   </section>
 
@@ -69,6 +68,68 @@
           <button type="submit" class="btn-save">💾 Salvar</button>
         </div>
         <div id="testResult" style="margin-top:12px;padding:8px;display:none"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de alarme -->
+  <div id="alarmModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeAlarmModal()">&times;</span>
+      <h2>⚠️ Nova Regra de Alarme</h2>
+      <form id="alarmForm">
+        <label>Nome da Regra:</label>
+        <input type="text" id="alarmName" placeholder="Ex: Tensão baixa L1" required />
+
+        <label>Métrica:</label>
+        <select id="alarmMetric" required>
+          <optgroup label="Tensões">
+            <option value="voltage">Tensão (monofásico)</option>
+            <option value="voltage_l1">Tensão L1</option>
+            <option value="voltage_l2">Tensão L2</option>
+            <option value="voltage_l3">Tensão L3</option>
+          </optgroup>
+          <optgroup label="Correntes">
+            <option value="current">Corrente (monofásico)</option>
+            <option value="current_l1">Corrente L1</option>
+            <option value="current_l2">Corrente L2</option>
+            <option value="current_l3">Corrente L3</option>
+          </optgroup>
+          <optgroup label="Potências">
+            <option value="power">Potência (monofásico)</option>
+            <option value="power_total">Potência Total</option>
+            <option value="power_l1">Potência L1</option>
+            <option value="power_l2">Potência L2</option>
+            <option value="power_l3">Potência L3</option>
+          </optgroup>
+          <optgroup label="Outros">
+            <option value="frequency">Frequência</option>
+            <option value="power_factor">Fator de Potência</option>
+          </optgroup>
+        </select>
+
+        <label>Condição:</label>
+        <select id="alarmOperator" required>
+          <option value=">">Maior que (>)</option>
+          <option value="<">Menor que (<)</option>
+          <option value=">=">Maior ou igual (>=)</option>
+          <option value="<=">Menor ou igual (<=)</option>
+          <option value="==">Igual a (==)</option>
+          <option value="!=">Diferente de (!=)</option>
+        </select>
+
+        <label>Valor Limite:</label>
+        <input type="number" id="alarmThreshold" step="0.01" placeholder="Ex: 200" required />
+
+        <label>
+          <input type="checkbox" id="alarmEnabled" checked />
+          Regra habilitada
+        </label>
+
+        <div style="display:flex;gap:12px;margin-top:20px">
+          <button type="submit" class="btn-save">💾 Criar Alarme</button>
+          <button type="button" onclick="closeAlarmModal()" style="background:#6c757d">Cancelar</button>
+        </div>
       </form>
     </div>
   </div>
@@ -133,8 +194,11 @@
     </div>
 
     <div class="card">
-      <h3>Eventos de Alarme</h3>
-      <ul id="alarmsList" style="font-size:13px;max-height:240px;overflow-y:auto;list-style:none;padding:0"></ul>
+      <h3>⚠️ Eventos de Alarme <button id="addAlarmBtn" style="float:right;font-size:12px;padding:4px 8px;cursor:pointer" title="Adicionar regra de alarme">+ Regra</button></h3>
+      <div id="alarmsContainer">
+        <div id="alarmRulesList" style="font-size:12px;margin-bottom:12px;padding:8px;background:#f8f9fa;border-radius:4px"></div>
+        <ul id="alarmsList" style="font-size:13px;max-height:180px;overflow-y:auto;list-style:none;padding:0;margin:0"></ul>
+      </div>
     </div>
 
     <div class="card">

@@ -108,6 +108,7 @@ def metrics_timerange(
 def demand_analysis(
     device_id: int,
     period: str = Query(default="1d"),  # 1d, 1w, 1m
+    metric: str = Query(default="power"),  # power, power_total, power_l1, etc
     db: Session = Depends(get_db)
 ):
     """Análise de demanda: pico, fora-ponta, média diária."""
@@ -119,17 +120,17 @@ def demand_analysis(
     }
     start = end - period_map.get(period, timedelta(days=1))
 
-    # Buscar potência no período
+    # Buscar potência no período (aceita power, power_total, power_l1, etc)
     q = db.query(models.Measurement).filter(
         models.Measurement.device_id == device_id,
-        models.Measurement.metric == "power",
+        models.Measurement.metric == metric,
         models.Measurement.timestamp >= start,
         models.Measurement.timestamp <= end
     ).order_by(models.Measurement.timestamp.asc())
 
     rows = q.all()
     if not rows:
-        return {"error": "Sem dados de potência no período"}
+        return {"error": f"Sem dados de {metric} no período"}
 
     df = pd.DataFrame([
         {"timestamp": r.timestamp, "power": r.value}

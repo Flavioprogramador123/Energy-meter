@@ -61,7 +61,7 @@ class MeasurementRead(BaseModel):
 
 
 class AlarmRuleCreate(BaseModel):
-    client_id: int
+    client_id: Optional[int] = None
     device_id: Optional[int] = None
     name: str
     metric: str

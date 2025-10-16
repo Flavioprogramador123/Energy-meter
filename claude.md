@@ -65,7 +65,7 @@ requirements.txt
 ```
 
 ## Configuração (.env)
-- APP_NAME (default: Pieng Medidor Master)
+- APP_NAME (default: Energy Meter Master)
 - API_PREFIX (default: /api)
 - DATABASE_URL (default: sqlite:///./data/app.db)
 - SCHEDULER_TIMEZONE (default: UTC)

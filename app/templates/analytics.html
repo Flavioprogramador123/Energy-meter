@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Energy Meter - Análise Temporal</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    optgroup { font-weight: bold; color: #087074; }
+    option { font-weight: normal; color: #333; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Energy Meter - Análise Temporal</h1>
+    <nav style="margin-top:8px">
+      <a href="/api/dashboard" style="color:#fff;margin-right:16px">← Dashboard</a>
+    </nav>
+  </header>
+
+  <section class="filters">
+    <label>Dispositivo:
+      <select id="deviceSelect">
+        {% for d in devices %}
+        <option value="{{ d.id }}">{{ d.name }} ({{ d.device_type }})</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Métrica:
+      <select id="metricSelect">
+        <optgroup label="Monofásico (PZEM)">
+          <option value="voltage">Tensão</option>
+          <option value="current">Corrente</option>
+          <option value="power" selected>Potência</option>
+          <option value="energy_wh">Energia</option>
+        </optgroup>
+        <optgroup label="Trifásico - Tensões (SDM630)">
+          <option value="voltage_l1">Tensão L1</option>
+          <option value="voltage_l2">Tensão L2</option>
+          <option value="voltage_l3">Tensão L3</option>
+          <option value="voltage_avg">Tensão Média</option>
+        </optgroup>
+        <optgroup label="Trifásico - Correntes (SDM630)">
+          <option value="current_l1">Corrente L1</option>
+          <option value="current_l2">Corrente L2</option>
+          <option value="current_l3">Corrente L3</option>
+          <option value="current_total">Corrente Total</option>
+        </optgroup>
+        <optgroup label="Trifásico - Potências (SDM630)">
+          <option value="power_l1">Potência L1</option>
+          <option value="power_l2">Potência L2</option>
+          <option value="power_l3">Potência L3</option>
+          <option value="power_total">Potência Total</option>
+        </optgroup>
+        <optgroup label="Outros (SDM630)">
+          <option value="frequency">Frequência</option>
+          <option value="power_factor">Fator de Potência</option>
+          <option value="energy_kwh">Energia (kWh)</option>
+        </optgroup>
+      </select>
+    </label>
+
+    <label>Período:
+      <select id="periodSelect">
+        <option value="1h">Última hora</option>
+        <option value="6h">Últimas 6 horas</option>
+        <option value="1d" selected>Último dia</option>
+        <option value="1w">Última semana</option>
+        <option value="1m">Último mês</option>
+        <option value="1y">Último ano</option>
+      </select>
+    </label>
+
+    <button id="loadBtn">🔍 Carregar</button>
+  </section>
+
+  <section class="grid" style="grid-template-columns: repeat(3, 1fr)">
+    <!-- Gráfico temporal agregado -->
+    <div class="card card-chart" style="grid-column: span 3; min-height: 400px">
+      <h3>📊 Evolução Temporal - Min/Média/Max</h3>
+      <canvas id="chartTemporal"></canvas>
+    </div>
+
+    <!-- Análise de demanda -->
+    <div class="card">
+      <h3>⚡ Demanda - Pico vs Fora-Ponta</h3>
+      <div id="demandBox" style="font-size:14px;line-height:2"></div>
+    </div>
+
+    <!-- Curva de carga diária -->
+    <div class="card card-chart" style="grid-column: span 2">
+      <h3>📈 Curva de Carga - Média por Hora</h3>
+      <canvas id="chartHourly"></canvas>
+    </div>
+
+    <!-- Estatísticas do período -->
+    <div class="card">
+      <h3>📋 Estatísticas do Período</h3>
+      <div id="statsBox" style="font-size:14px;line-height:2"></div>
+    </div>
+
+    <!-- Consumo acumulado -->
+    <div class="card card-chart" style="grid-column: span 2">
+      <h3>🔋 Consumo Acumulado (kWh)</h3>
+      <canvas id="chartEnergy"></canvas>
+    </div>
+  </section>
+
+  <script>
+    function el(id) { return document.getElementById(id); }
+
+    let chartTemporal, chartHourly, chartEnergy;
+
+    async function loadAnalytics() {
+      const deviceId = el('deviceSelect').value;
+      const metric = el('metricSelect').value;
+      const period = el('periodSelect').value;
+
+      if (!deviceId) return;
+
+      try {
+        // Buscar dados temporais agregados
+        const timeData = await fetch(`/api/metrics/timerange?device_id=${deviceId}&metric=${metric}&period=${period}`)
+          .then(r => r.json());
+
+        if (timeData.data && timeData.data.length > 0) {
+          const labels = timeData.data.map(d => new Date(d.timestamp).toLocaleString());
+          const means = timeData.data.map(d => d.mean);
+          const mins = timeData.data.map(d => d.min);
+          const maxs = timeData.data.map(d => d.max);
+
+          if (!chartTemporal) {
+            chartTemporal = new Chart(el('chartTemporal'), {
+              type: 'line',
+              data: {
+                labels: labels,
+                datasets: [
+                  { label: 'Mínimo', data: mins, borderColor: '#457b9d', backgroundColor: '#457b9d30', fill: true, tension: 0.4 },
+                  { label: 'Média', data: means, borderColor: '#2a9d8f', backgroundColor: '#2a9d8f50', fill: true, tension: 0.4, borderWidth: 3 },
+                  { label: 'Máximo', data: maxs, borderColor: '#e63946', backgroundColor: '#e6394630', fill: true, tension: 0.4 }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false }
+              }
+            });
+          } else {
+            chartTemporal.data.labels = labels;
+            chartTemporal.data.datasets[0].data = mins;
+            chartTemporal.data.datasets[1].data = means;
+            chartTemporal.data.datasets[2].data = maxs;
+            chartTemporal.update();
+          }
+
+          // Estatísticas
+          const allMeans = means.filter(v => !isNaN(v));
+          const statsHTML = `
+            <strong>Período:</strong> ${timeData.resample_freq}<br>
+            <strong>Amostras:</strong> ${timeData.data.length}<br>
+            <strong>Média geral:</strong> ${(allMeans.reduce((a,b) => a+b, 0) / allMeans.length).toFixed(2)}<br>
+            <strong>Valor máximo:</strong> ${Math.max(...maxs).toFixed(2)}<br>
+            <strong>Valor mínimo:</strong> ${Math.min(...mins).toFixed(2)}
+          `;
+          el('statsBox').innerHTML = statsHTML;
+        }
+
+        // Análise de demanda (apenas para métricas de potência)
+        const isPowerMetric = metric === 'power' || metric.startsWith('power_');
+        if (isPowerMetric) {
+          const demandData = await fetch(`/api/metrics/demand?device_id=${deviceId}&period=${period}&metric=${metric}`)
+            .then(r => r.json());
+
+          if (!demandData.error) {
+            const demandHTML = `
+              <strong>🔴 Horário de Ponta (18h-21h)</strong><br>
+              Máx: ${demandData.peak.max.toFixed(2)} W<br>
+              Média: ${demandData.peak.mean.toFixed(2)} W<br>
+              <hr style="margin:8px 0">
+              <strong>🟢 Fora-Ponta</strong><br>
+              Máx: ${demandData.off_peak.max.toFixed(2)} W<br>
+              Média: ${demandData.off_peak.mean.toFixed(2)} W<br>
+              <hr style="margin:8px 0">
+              <strong>📊 Geral</strong><br>
+              Máx: ${demandData.overall.max.toFixed(2)} W<br>
+              Média: ${demandData.overall.mean.toFixed(2)} W
+            `;
+            el('demandBox').innerHTML = demandHTML;
+
+            // Curva de carga horária
+            const hourlyLabels = demandData.hourly_average.map(h => `${h.hour}h`);
+            const hourlyData = demandData.hourly_average.map(h => h.power);
+
+            if (!chartHourly) {
+              chartHourly = new Chart(el('chartHourly'), {
+                type: 'bar',
+                data: {
+                  labels: hourlyLabels,
+                  datasets: [{
+                    label: 'Potência Média (W)',
+                    data: hourlyData,
+                    backgroundColor: hourlyData.map((_, i) => {
+                      const hour = demandData.hourly_average[i].hour;
+                      return (hour >= 18 && hour < 21) ? '#e6394680' : '#2a9d8f80';
+                    }),
+                    borderColor: '#0a9396',
+                    borderWidth: 1
+                  }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+              });
+            } else {
+              chartHourly.data.labels = hourlyLabels;
+              chartHourly.data.datasets[0].data = hourlyData;
+              chartHourly.update();
+            }
+          }
+        } else {
+          el('demandBox').innerHTML = '<em style="color:#888">Análise de demanda disponível apenas para métricas de Potência</em>';
+        }
+
+        // Gráfico de energia acumulada (se for energia)
+        if (metric === 'energy_wh') {
+          const energyData = timeData.data.map(d => ({
+            timestamp: d.timestamp,
+            energy_kwh: d.mean / 1000
+          }));
+
+          const energyLabels = energyData.map(d => new Date(d.timestamp).toLocaleDateString());
+          const energyValues = energyData.map(d => d.energy_kwh);
+
+          if (!chartEnergy) {
+            chartEnergy = new Chart(el('chartEnergy'), {
+              type: 'line',
+              data: {
+                labels: energyLabels,
+                datasets: [{
+                  label: 'Energia (kWh)',
+                  data: energyValues,
+                  borderColor: '#f77f00',
+                  backgroundColor: '#f77f0030',
+                  fill: true,
+                  tension: 0.4
+                }]
+              },
+              options: { responsive: true, maintainAspectRatio: false }
+            });
+          } else {
+            chartEnergy.data.labels = energyLabels;
+            chartEnergy.data.datasets[0].data = energyValues;
+            chartEnergy.update();
+          }
+        }
+
+      } catch (error) {
+        console.error('Erro ao carregar analytics:', error);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      el('loadBtn').addEventListener('click', loadAnalytics);
+      el('periodSelect').addEventListener('change', loadAnalytics);
+      loadAnalytics();
+    });
+  </script>
+</body>
+</html>

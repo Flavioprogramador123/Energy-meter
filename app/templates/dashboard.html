@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Energy Meter - Dashboard</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script defer src="/static/js/dashboard.js?v=3"></script>
+</head>
+<body>
+  <header style="display:flex;justify-content:space-between;align-items:center">
+    <h1>Energy Meter - Dashboard</h1>
+    <a href="/api/analytics" style="color:#fff;text-decoration:none;padding:8px 16px;background:#087074;border-radius:6px;font-weight:600">📊 Análise Temporal</a>
+  </header>
+
+  <section class="filters">
+    <label>Dispositivo:
+      <select id="deviceSelect">
+        {% for d in devices %}
+        <option value="{{ d.id }}" data-active="{{ d.active }}">{{ d.name }} ({{ d.device_type }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    <span id="deviceStatus" class="status-indicator"></span>
+    <button id="refreshBtn">Atualizar</button>
+    <button id="configBtn" class="btn-config" title="Configurações">⚙️</button>
+    <span style="margin-left:auto;font-size:13px;color:#666">Atualização automática a cada 30s</span>
+  </section>
+
+  <!-- Modal de configuração -->
+  <div id="configModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>⚙️ Configuração do Dispositivo</h2>
+      <form id="configForm">
+        <label>Nome:</label>
+        <input type="text" id="configName" placeholder="Nome do dispositivo" />
+
+        <label>Porta COM:</label>
+        <input type="text" id="configPort" placeholder="COM3" />
+
+        <label>Slave ID:</label>
+        <input type="number" id="configSlaveId" value="1" />
+
+        <label>Baudrate:</label>
+        <select id="configBaudrate">
+          <option value="9600">9600</option>
+          <option value="19200">19200</option>
+          <option value="38400">38400</option>
+          <option value="115200">115200</option>
+        </select>
+
+        <label>Driver:</label>
+        <select id="configDriver">
+          <option value="pzem004t">PZEM-004T</option>
+          <option value="generic">Genérico</option>
+        </select>
+
+        <label>
+          <input type="checkbox" id="configActive" checked />
+          Dispositivo ativo
+        </label>
+
+        <div style="display:flex;gap:12px;margin-top:20px">
+          <button type="button" id="testBtn" class="btn-test">🔧 Testar Conexão</button>
+          <button type="submit" class="btn-save">💾 Salvar</button>
+        </div>
+        <div id="testResult" style="margin-top:12px;padding:8px;display:none"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de alarme -->
+  <div id="alarmModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeAlarmModal()">&times;</span>
+      <h2>⚠️ Nova Regra de Alarme</h2>
+      <form id="alarmForm">
+        <label>Nome da Regra:</label>
+        <input type="text" id="alarmName" placeholder="Ex: Tensão baixa L1" required />
+
+        <label>Métrica:</label>
+        <select id="alarmMetric" required>
+          <optgroup label="Tensões">
+            <option value="voltage">Tensão (monofásico)</option>
+            <option value="voltage_l1">Tensão L1</option>
+            <option value="voltage_l2">Tensão L2</option>
+            <option value="voltage_l3">Tensão L3</option>
+          </optgroup>
+          <optgroup label="Correntes">
+            <option value="current">Corrente (monofásico)</option>
+            <option value="current_l1">Corrente L1</option>
+            <option value="current_l2">Corrente L2</option>
+            <option value="current_l3">Corrente L3</option>
+          </optgroup>
+          <optgroup label="Potências">
+            <option value="power">Potência (monofásico)</option>
+            <option value="power_total">Potência Total</option>
+            <option value="power_l1">Potência L1</option>
+            <option value="power_l2">Potência L2</option>
+            <option value="power_l3">Potência L3</option>
+          </optgroup>
+          <optgroup label="Outros">
+            <option value="frequency">Frequência</option>
+            <option value="power_factor">Fator de Potência</option>
+          </optgroup>
+        </select>
+
+        <label>Condição:</label>
+        <select id="alarmOperator" required>
+          <option value=">">Maior que (>)</option>
+          <option value="<">Menor que (<)</option>
+          <option value=">=">Maior ou igual (>=)</option>
+          <option value="<=">Menor ou igual (<=)</option>
+          <option value="==">Igual a (==)</option>
+          <option value="!=">Diferente de (!=)</option>
+        </select>
+
+        <label>Valor Limite:</label>
+        <input type="number" id="alarmThreshold" step="0.01" placeholder="Ex: 200" required />
+
+        <label>
+          <input type="checkbox" id="alarmEnabled" checked />
+          Regra habilitada
+        </label>
+
+        <div style="display:flex;gap:12px;margin-top:20px">
+          <button type="submit" class="btn-save">💾 Criar Alarme</button>
+          <button type="button" onclick="closeAlarmModal()" style="background:#6c757d">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <section class="grid">
+    <!-- Cards de valores em tempo real -->
+    <div class="card card-live">
+      <h3>⚡ Tensão</h3>
+      <div class="live-value" id="liveVoltage">-- V</div>
+    </div>
+
+    <div class="card card-live">
+      <h3>🔌 Corrente</h3>
+      <div class="live-value" id="liveCurrent">-- A</div>
+    </div>
+
+    <div class="card card-live">
+      <h3>💡 Potência</h3>
+      <div class="live-value" id="livePower">-- W</div>
+    </div>
+
+    <div class="card card-live">
+      <h3>📊 Energia Total</h3>
+      <div class="live-value" id="liveEnergy">-- kWh</div>
+    </div>
+
+    <div class="card card-live">
+      <h3>📈 Fator de Potência</h3>
+      <div class="live-value" id="livePF">--</div>
+    </div>
+
+    <div class="card card-live">
+      <h3>💰 Custo Estimado</h3>
+      <div class="live-value" id="liveCost">R$ --</div>
+    </div>
+
+    <!-- Gráficos de séries temporais -->
+    <div class="card card-chart">
+      <h3>Tensão (V) - Série Temporal</h3>
+      <canvas id="chartVoltage"></canvas>
+    </div>
+
+    <div class="card card-chart">
+      <h3>Corrente (A) - Série Temporal</h3>
+      <canvas id="chartCurrent"></canvas>
+    </div>
+
+    <div class="card card-chart">
+      <h3>Potência (W) - Série Temporal</h3>
+      <canvas id="chartPower"></canvas>
+    </div>
+
+    <div class="card card-chart">
+      <h3>Energia (Wh) - Série Temporal</h3>
+      <canvas id="chartEnergy"></canvas>
+    </div>
+
+    <!-- Gráfico multi-métrica e alarmes -->
+    <div class="card card-chart" style="grid-column: span 2">
+      <h3>Monitoramento Completo - Multi-Métrica</h3>
+      <canvas id="chartMulti"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>⚠️ Eventos de Alarme <button id="addAlarmBtn" style="float:right;font-size:12px;padding:4px 8px;cursor:pointer" title="Adicionar regra de alarme">+ Regra</button></h3>
+      <div id="alarmsContainer">
+        <div id="alarmRulesList" style="font-size:12px;margin-bottom:12px;padding:8px;background:#f8f9fa;border-radius:4px"></div>
+        <ul id="alarmsList" style="font-size:13px;max-height:180px;overflow-y:auto;list-style:none;padding:0;margin:0"></ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Médias das Últimas 100 Leituras</h3>
+      <div id="averagesBox" style="font-size:14px;line-height:2"></div>
+    </div>
+  </section>
+</body>
+</html>
+

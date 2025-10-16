@@ -1,4 +1,4 @@
-# 🚀 Deploy no Vercel - Pieng Medidor Master
+# 🚀 Deploy no Vercel - Energy Meter Master
 
 ## 📋 Pré-requisitos
 
@@ -29,7 +29,7 @@
 Configure no Vercel Dashboard:
 
 ```env
-APP_NAME=Pieng Medidor Master
+APP_NAME=Energy Meter Master
 API_PREFIX=/api
 DATABASE_URL=sqlite:///./pieng_medidor.db
 SCHEDULER_TIMEZONE=America/Sao_Paulo

@@ -1,4 +1,4 @@
-# Pieng Medidor — Guia de Arquitetura (para IA)
+# Energy Meter — Guia de Arquitetura (para IA)
 
 Documento de referência para evolução automática. Contém visão, árvore, modelos, endpoints, conectores, regras e analytics.
 

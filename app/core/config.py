@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    app_name: str = "Pieng Medidor Master"
+    app_name: str = "Energy Meter Master"
     api_prefix: str = "/api"
     database_url: str = "sqlite:///./data/app.db"
     enable_forwarding: bool = True

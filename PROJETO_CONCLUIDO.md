@@ -1,4 +1,4 @@
-# 🎉 Projeto Pieng Medidor Master - Concluído!
+# 🎉 Projeto Energy Meter Master - Concluído!
 
 ## ✅ **Status Final:**
 

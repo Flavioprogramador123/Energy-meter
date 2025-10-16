@@ -3,6 +3,13 @@ Script para registrar o Eastron SDM630 no banco de dados
 Executa uma vez para criar o cliente e dispositivo
 """
 import sys
+import os
+
+# Fix Windows console encoding
+if sys.platform == 'win32':
+    os.system('chcp 65001 >nul 2>&1')
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 from app.core.db import SessionLocal
 from app import crud, schemas
 

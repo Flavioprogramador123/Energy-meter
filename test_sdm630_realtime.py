@@ -4,9 +4,16 @@ Atualiza a cada 2 segundos
 """
 import time
 import os
+import sys
 from datetime import datetime
 from pymodbus.client import ModbusTcpClient
 from app.connectors.eastron_sdm630 import read_sdm630_metrics
+
+# Fix Windows console encoding
+if sys.platform == 'win32':
+    os.system('chcp 65001 >nul 2>&1')
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 
 def format_power(watts):

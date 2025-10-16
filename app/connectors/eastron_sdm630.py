@@ -26,16 +26,16 @@ def read_sdm630_metrics(client: Union[Any, Any], base_address: int = 0) -> Dict[
     """
 
     # Ler bloco principal (tensões, correntes, potências)
-    regs_main = client.read_input_registers(address=0x0000, count=36).registers
+    regs_main = client.read_input_registers(address=0x0000, count=36)
 
     # Ler potência total
-    regs_power_total = client.read_input_registers(address=0x0034, count=2).registers
+    regs_power_total = client.read_input_registers(address=0x0034, count=2)
 
     # Ler frequência e energia
-    regs_freq_energy = client.read_input_registers(address=0x0046, count=4).registers
+    regs_freq_energy = client.read_input_registers(address=0x0046, count=4)
 
     # Ler fator de potência
-    regs_pf = client.read_input_registers(address=0x001E, count=2).registers
+    regs_pf = client.read_input_registers(address=0x001E, count=2)
 
     def regs_to_float32(reg_high: int, reg_low: int) -> float:
         """Converte 2 registradores em Float32 IEEE754 (Big Endian)."""
